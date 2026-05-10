@@ -2,6 +2,14 @@ import { FiGithub, FiExternalLink } from 'react-icons/fi';
 
 const projects = [
   {
+    name: '3D Interactive Portfolio',
+    description:
+      'A premium, single-page portfolio website featuring a bento grid layout, interactive 3D character model, and cinematic scroll animations. Designed to deliver a visually stunning first impression.',
+    tech: ['React.js', 'Three.js', 'GSAP', 'Vite'],
+    github: 'https://github.com/BhavyaBulani/portfolio-',
+    live: null,
+  },
+  {
     name: 'MedBuddy',
     description:
       'AI-powered web app that simplifies medical prescriptions by extracting, interpreting, and presenting them in a user-friendly format. Features medicine tracking, reminders, and nearby pharmacy locator.',
