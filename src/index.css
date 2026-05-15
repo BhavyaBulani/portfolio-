@@ -153,12 +153,31 @@ a {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.3s ease;
+  contain: layout style paint; /* Rendering isolation for performance */
+  content-visibility: auto;    /* Skip rendering when off-screen */
 }
 
 .bento-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
   border-color: var(--accent-glow);
+}
+
+/* ===== STAR PARTICLES (shared animation) ===== */
+.star-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--star-glow);
+  box-shadow: 0 0 var(--star-shadow-size) var(--star-glow);
+  pointer-events: none;
+  z-index: 10;
+  animation: starBurst 0.7s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes starBurst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--star-tx), var(--star-ty)) scale(0); opacity: 0; }
 }
 
 /* Spotlight effect overlay */
@@ -654,6 +673,46 @@ a {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* Scrollable project list — contained within projects card */
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* Increased spacing between project cards */
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 8px;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for projects section only */
+.projects-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.projects-list::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.projects-list::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 3px;
+  opacity: 0.6;
+}
+
+.projects-list::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-light);
+}
+
+/* Firefox scrollbar */
+.projects-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
 }
 
 .project-item {
@@ -661,7 +720,8 @@ a {
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--bg-card-hover);
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  flex-shrink: 0;
 }
 
 .project-item:hover {
@@ -699,7 +759,7 @@ a {
   font-size: 1rem;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .project-link-btn:hover {
@@ -994,10 +1054,68 @@ a {
 
 .hero-card {
   background-size: 200% 200%;
-  animation: gradient-shift 6s ease-in-out infinite;
+  animation: gradient-shift 12s ease-in-out infinite; /* Slowed from 6s — less GPU repaint */
+  will-change: background-position;
 }
 
 /* Split text styles */
 .split-parent {
   overflow: hidden;
+}
+
+/* ===== PERFORMANCE: Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .hero-card {
+    animation: none;
+  }
+
+  .skills-marquee-track {
+    animation: none;
+  }
+
+  .status-dot {
+    animation: none;
+  }
+
+  .bento-card,
+  .bento-card:hover {
+    transition: none;
+  }
+
+  .star-particle {
+    animation: none;
+    display: none;
+  }
+
+  .link-icon-wrapper::after {
+    animation: none;
+  }
+}
+
+/* ===== PERFORMANCE: Mobile optimizations ===== */
+@media (max-width: 640px) {
+  /* Disable backdrop-filter on mobile — very GPU intensive */
+  .resume-btn {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Reduce card hover effects on touch devices */
+  .bento-card:hover {
+    transform: none;
+  }
+
+  /* Simpler shadows on mobile */
+  .hero-card {
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+  }
+
+  .hero-card:hover {
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+  }
+
+  .projects-list {
+    max-height: 350px;
+  }
 }

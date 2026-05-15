@@ -1,12 +1,20 @@
-import { useRef, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { useGLTF, useAnimations, OrbitControls, Environment } from '@react-three/drei';
+import { useRef, useEffect, useMemo } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useGLTF, useAnimations, OrbitControls } from '@react-three/drei';
 import { Suspense } from 'react';
+
+// Use the Draco-compressed model (1.29MB vs 20.56MB original)
+const MODEL_PATH = '/cartoon-boy-optimized.glb';
+
+// Draco decoder hosted on CDN for fast loading
+const DRACO_CDN = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
 
 function CartoonBoy({ onLoaded }) {
   const ref = useRef();
-  const { scene, animations } = useGLTF('/cartoon boy 3d model.glb');
+  const { scene, animations } = useGLTF(MODEL_PATH, DRACO_CDN);
   const { actions } = useAnimations(animations, ref);
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const frameSkip = useRef(0);
 
   useEffect(() => {
     if (actions && Object.keys(actions).length > 0) {
@@ -17,27 +25,36 @@ function CartoonBoy({ onLoaded }) {
     onLoaded?.();
   }, [actions, onLoaded]);
 
-  useFrame((state) => {
-    if (ref.current) {
-      // Base floating height
-      const floatY = Math.sin(state.clock.elapsedTime * 1.5) * 0.03 - 0.05;
-      
-      // Calculate target position (towards cursor)
-      // state.pointer ranges from -1 to 1 across the canvas
-      const targetX = state.pointer.x * 0.4;
-      const targetY = floatY + (state.pointer.y * 0.2);
+  // Cache pointer position from Three.js state — avoids reading every frame
+  const { viewport } = useThree();
 
-      // Smoothly interpolate current position to target position
-      ref.current.position.x += (targetX - ref.current.position.x) * 0.02;
-      ref.current.position.y += (targetY - ref.current.position.y) * 0.02;
-      
-      // Slightly rotate towards cursor for depth
-      const targetRotationY = -Math.PI / 2 + (state.pointer.x * 0.08);
-      const targetRotationX = state.pointer.y * -0.04;
-      
-      ref.current.rotation.y += (targetRotationY - ref.current.rotation.y) * 0.02;
-      ref.current.rotation.x += (targetRotationX - ref.current.rotation.x) * 0.02;
-    }
+  useFrame((state) => {
+    if (!ref.current) return;
+
+    // Throttle: only update every 2nd frame for performance
+    frameSkip.current++;
+    if (frameSkip.current % 2 !== 0) return;
+
+    // Use a higher lerp factor so it still feels smooth at half framerate
+    const lerp = 0.04;
+
+    // Base floating height
+    const floatY = Math.sin(state.clock.elapsedTime * 1.5) * 0.03 - 0.05;
+
+    // Calculate target position (towards cursor)
+    const targetX = state.pointer.x * 0.4;
+    const targetY = floatY + (state.pointer.y * 0.2);
+
+    // Smoothly interpolate current position to target position
+    ref.current.position.x += (targetX - ref.current.position.x) * lerp;
+    ref.current.position.y += (targetY - ref.current.position.y) * lerp;
+
+    // Slightly rotate towards cursor for depth
+    const targetRotationY = -Math.PI / 2 + (state.pointer.x * 0.08);
+    const targetRotationX = state.pointer.y * -0.04;
+
+    ref.current.rotation.y += (targetRotationY - ref.current.rotation.y) * lerp;
+    ref.current.rotation.x += (targetRotationX - ref.current.rotation.x) * lerp;
   });
 
   return (
@@ -61,18 +78,32 @@ function LoadingFallback() {
 }
 
 export default function CartoonBoyModel({ onLoaded }) {
+  // Detect if device prefers reduced motion
+  const prefersReduced = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+  }, []);
+
   return (
     <Canvas
       camera={{ position: [0, 0, 5], fov: 45 }}
       style={{ width: '100%', height: '100%' }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{
+        antialias: false,       // Disable AA for performance (big GPU savings)
+        alpha: true,
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: false,
+      }}
+      dpr={[1, 1.5]}           // Cap pixel ratio (saves GPU on retina displays)
+      performance={{ min: 0.5 }} // Allow R3F to throttle when tab not focused
     >
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 10, 5]} intensity={1.5} />
-      <pointLight position={[-3, 2, 4]} intensity={1} color="#a78bfa" />
+      <ambientLight intensity={0.9} />
+      <directionalLight position={[5, 10, 5]} intensity={1.8} />
+      <pointLight position={[-3, 2, 4]} intensity={0.8} color="#a78bfa" />
+      {/* Removed Environment preset="city" — saves downloading an HDR map
+          and heavy IBL computation. Simple lights above provide similar effect. */}
       <Suspense fallback={<LoadingFallback />}>
         <CartoonBoy onLoaded={onLoaded} />
-        <Environment preset="city" />
       </Suspense>
       <OrbitControls
         enableZoom={false}
@@ -86,3 +117,6 @@ export default function CartoonBoyModel({ onLoaded }) {
     </Canvas>
   );
 }
+
+// Preload with Draco decoder so model starts downloading immediately
+useGLTF.preload(MODEL_PATH, DRACO_CDN);

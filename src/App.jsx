@@ -61,6 +61,8 @@ function App() {
     if (!gridRef.current || !appReady) return;
 
     const cards = gridRef.current.querySelectorAll('.bento-card');
+    // Check if user prefers reduced motion
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
     cards.forEach((card, i) => {
       const isHero = card.classList.contains('hero-card');
@@ -72,7 +74,7 @@ function App() {
           opacity: 1,
           scale: 1,
           y: 0,
-          duration: 1.0,
+          duration: prefersReduced ? 0.01 : 1.0,
           ease: 'power4.out',
           delay: 0.15,
         });
@@ -82,15 +84,15 @@ function App() {
       /* All section cards: uniform fade-up reveal */
       gsap.set(card, {
         opacity: 0,
-        y: 50,
-        scale: 0.96,
+        y: prefersReduced ? 0 : 50,
+        scale: prefersReduced ? 1 : 0.96,
       });
 
       gsap.to(card, {
         opacity: 1,
         y: 0,
         scale: 1,
-        duration: 0.85,
+        duration: prefersReduced ? 0.01 : 0.85,
         ease: 'power3.out',
         scrollTrigger: {
           trigger: card,
@@ -100,20 +102,23 @@ function App() {
       });
     });
 
-    /* --- Subtle parallax float on section titles --- */
-    const titles = gridRef.current.querySelectorAll('.section-title');
-    titles.forEach((title) => {
-      gsap.to(title, {
-        y: -6,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: title,
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: 1.5,
-        },
+    /* --- Subtle parallax float on section titles (skip on mobile / reduced motion) --- */
+    const isMobile = window.innerWidth <= 640;
+    if (!prefersReduced && !isMobile) {
+      const titles = gridRef.current.querySelectorAll('.section-title');
+      titles.forEach((title) => {
+        gsap.to(title, {
+          y: -6,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: title,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 2.5, // Higher = less frequent updates = better perf
+          },
+        });
       });
-    });
+    }
 
     return () => {
       ScrollTrigger.getAll().forEach((st) => st.kill());
