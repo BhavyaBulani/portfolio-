@@ -1,8 +1,15 @@
 import { useRef, useState, useCallback, useMemo } from 'react';
 
+// Detect mobile/low-end once at module level
+const IS_MOBILE = typeof window !== 'undefined' && (
+  ('ontouchstart' in window && window.innerWidth <= 768) ||
+  ((navigator.hardwareConcurrency || 4) <= 4 && (navigator.deviceMemory || 8) <= 4)
+);
+
 /**
  * MagicBentoCard - A card with spotlight tracking, border glow, and star particle effects.
  * Optimized: spotlight uses RAF-throttled updates, stars use shared keyframes.
+ * Mobile: spotlight and stars are disabled entirely for performance.
  */
 const MagicBentoCard = ({
   children,
@@ -12,7 +19,7 @@ const MagicBentoCard = ({
   enableSpotlight = true,
   enableBorderGlow = true,
   enableStars = true,
-  particleCount = 6, // Reduced from 8
+  particleCount = 6,
   style = {},
   ...props
 }) => {
@@ -22,11 +29,14 @@ const MagicBentoCard = ({
   const [isHovered, setIsHovered] = useState(false);
   const [stars, setStars] = useState([]);
 
-  // Throttled mouse tracking using requestAnimationFrame instead of setState on every move
+  // Disable expensive effects on mobile
+  const effectiveSpotlight = enableSpotlight && !IS_MOBILE;
+  const effectiveStars = enableStars && !IS_MOBILE;
+
+  // Throttled mouse tracking using requestAnimationFrame
   const handleMouseMove = useCallback((e) => {
     if (!cardRef.current || !spotlightRef.current) return;
 
-    // Cancel previous pending frame
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
     rafRef.current = requestAnimationFrame(() => {
@@ -34,14 +44,13 @@ const MagicBentoCard = ({
       const rect = cardRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      // Direct DOM update — avoids React re-render on every mouse move
       spotlightRef.current.style.background =
         `radial-gradient(${spotlightRadius}px circle at ${x}px ${y}px, rgba(${glowColor}, 0.12), transparent 70%)`;
     });
   }, [spotlightRadius, glowColor]);
 
   const handleClick = useCallback((e) => {
-    if (!enableStars || !cardRef.current) return;
+    if (!effectiveStars || !cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -53,7 +62,6 @@ const MagicBentoCard = ({
         id: Date.now() + i,
         x, y, angle, speed,
         size: 3 + Math.random() * 4,
-        // Pre-calculate end position
         tx: Math.cos(angle * Math.PI / 180) * speed,
         ty: Math.sin(angle * Math.PI / 180) * speed,
       };
@@ -64,7 +72,7 @@ const MagicBentoCard = ({
     setTimeout(() => {
       setStars((prev) => prev.filter((s) => !newStars.includes(s)));
     }, 700);
-  }, [enableStars, particleCount]);
+  }, [effectiveStars, particleCount]);
 
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
   const handleMouseLeave = useCallback(() => setIsHovered(false), []);
@@ -73,15 +81,15 @@ const MagicBentoCard = ({
     <div
       ref={cardRef}
       className={`bento-card ${className}`}
-      onMouseMove={enableSpotlight ? handleMouseMove : undefined}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseMove={effectiveSpotlight ? handleMouseMove : undefined}
+      onMouseEnter={!IS_MOBILE ? handleMouseEnter : undefined}
+      onMouseLeave={!IS_MOBILE ? handleMouseLeave : undefined}
       onClick={handleClick}
       style={style}
       {...props}
     >
-      {/* Spotlight effect — uses direct DOM ref instead of state-driven re-renders */}
-      {enableSpotlight && (
+      {/* Spotlight effect — only on desktop */}
+      {effectiveSpotlight && (
         <div
           ref={spotlightRef}
           className="card-spotlight"
@@ -89,7 +97,7 @@ const MagicBentoCard = ({
         />
       )}
 
-      {/* Star particles — uses inline transform instead of dynamic @keyframes */}
+      {/* Star particles — only on desktop */}
       {stars.map((star) => (
         <span
           key={star.id}

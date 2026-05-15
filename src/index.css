@@ -1093,7 +1093,7 @@ a {
 }
 
 /* ===== PERFORMANCE: Mobile optimizations ===== */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   /* Disable backdrop-filter on mobile — very GPU intensive */
   .resume-btn {
     backdrop-filter: none;
@@ -1101,21 +1101,75 @@ a {
     background: rgba(255, 255, 255, 0.25);
   }
 
-  /* Reduce card hover effects on touch devices */
+  /* Disable ALL hover effects on touch devices */
   .bento-card:hover {
     transform: none;
+    box-shadow: var(--shadow);
+    border-color: var(--border);
+  }
+
+  /* Kill the border glow pseudo-element — GPU heavy */
+  .bento-card::before {
+    display: none;
   }
 
   /* Simpler shadows on mobile */
-  .hero-card {
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+  .hero-card,
+  .hero-card:hover {
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.25);
+    animation: gradient-shift 20s ease-in-out infinite; /* Much slower on mobile */
   }
 
-  .hero-card:hover {
-    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+  /* Disable spinning dashed border on link icons */
+  .link-icon-wrapper::after {
+    display: none;
+  }
+
+  /* Disable link hover lift */
+  .link-item:hover {
+    transform: none;
+  }
+
+  /* Disable project hover glow */
+  .project-item:hover {
+    box-shadow: none;
+  }
+
+  /* Disable project button hover scale */
+  .project-link-btn:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Disable skill chip hover effects */
+  .skill-chip:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Disable contact submit hover */
+  .contact-submit:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Disable theme toggle hover animations */
+  .theme-toggle-btn:hover {
+    transform: none;
+    box-shadow: none;
   }
 
   .projects-list {
     max-height: 350px;
+  }
+
+  /* Reduce content-visibility impact on visible hero */
+  .hero-card {
+    content-visibility: visible;
+  }
+
+  /* Remove will-change on mobile to free GPU memory */
+  .hero-card {
+    will-change: auto;
   }
 }
