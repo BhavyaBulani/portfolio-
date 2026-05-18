@@ -11,8 +11,11 @@ import ContactCard from './components/ContactCard';
 import PillNav from './components/PillNav';
 import Loading from './components/loading-page/Loading';
 import { setProgress } from './utils/loadingProgress';
+import { getDeviceCapability } from './utils/deviceCapability';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const device = getDeviceCapability();
 
 // Lazy-load the heavy 3D model for better initial page performance
 const CartoonBoyModel = lazy(() => import('./components/CartoonBoyModel'));
@@ -46,13 +49,16 @@ function App() {
     }
   }, []);
 
-  /* --- Safety timeout: dismiss preloader after 10s max --- */
+  /* --- Safety timeout: dismiss preloader faster on low-end devices --- */
   useEffect(() => {
+    // Low-end: 4s timeout (model is a static SVG, loads instantly)
+    // Mid/High: 10s timeout
+    const timeoutMs = device.tier === 'low' ? 4000 : 10000;
     const timeout = setTimeout(() => {
       if (progressRef.current) {
         progressRef.current.loaded();
       }
-    }, 10000);
+    }, timeoutMs);
     return () => clearTimeout(timeout);
   }, []);
 
@@ -61,11 +67,15 @@ function App() {
     if (!gridRef.current || !appReady) return;
 
     const cards = gridRef.current.querySelectorAll('.bento-card');
-    // Check if user prefers reduced motion
-    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
     cards.forEach((card, i) => {
       const isHero = card.classList.contains('hero-card');
+
+      // ★ On low-end: skip all animations, just make cards visible
+      if (device.shouldReduceAnimations) {
+        gsap.set(card, { opacity: 1, scale: 1, y: 0 });
+        return;
+      }
 
       if (isHero) {
         /* Hero card: cinematic scale-up entrance */
@@ -74,7 +84,7 @@ function App() {
           opacity: 1,
           scale: 1,
           y: 0,
-          duration: prefersReduced ? 0.01 : 1.0,
+          duration: 1.0,
           ease: 'power4.out',
           delay: 0.15,
         });
@@ -84,15 +94,15 @@ function App() {
       /* All section cards: uniform fade-up reveal */
       gsap.set(card, {
         opacity: 0,
-        y: prefersReduced ? 0 : 50,
-        scale: prefersReduced ? 1 : 0.96,
+        y: 50,
+        scale: 0.96,
       });
 
       gsap.to(card, {
         opacity: 1,
         y: 0,
         scale: 1,
-        duration: prefersReduced ? 0.01 : 0.85,
+        duration: 0.85,
         ease: 'power3.out',
         scrollTrigger: {
           trigger: card,
@@ -102,9 +112,8 @@ function App() {
       });
     });
 
-    /* --- Subtle parallax float on section titles (skip on mobile / reduced motion) --- */
-    const isMobile = window.innerWidth <= 640;
-    if (!prefersReduced && !isMobile) {
+    /* --- Subtle parallax float on section titles (skip on mobile / reduced motion / mid-tier) --- */
+    if (!device.shouldReduceAnimations && device.tier === 'high') {
       const titles = gridRef.current.querySelectorAll('.section-title');
       titles.forEach((title) => {
         gsap.to(title, {
@@ -181,8 +190,8 @@ function App() {
                 text="Bhavya Bulani"
                 className="hero-name"
                 tag="h1"
-                delay={60}
-                duration={1.2}
+                delay={device.shouldReduceAnimations ? 0 : 60}
+                duration={device.shouldReduceAnimations ? 0.01 : 1.2}
                 ease="power3.out"
                 splitType="chars"
                 from={{ opacity: 0, y: 40 }}
@@ -194,8 +203,8 @@ function App() {
                 text="Web Developer"
                 className="hero-title"
                 tag="p"
-                delay={40}
-                duration={0.8}
+                delay={device.shouldReduceAnimations ? 0 : 40}
+                duration={device.shouldReduceAnimations ? 0.01 : 0.8}
                 ease="power2.out"
                 splitType="chars"
                 from={{ opacity: 0, y: 20 }}

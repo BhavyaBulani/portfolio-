@@ -3,8 +3,11 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText as GSAPSplitText } from 'gsap/SplitText';
 import { useGSAP } from '@gsap/react';
+import { getDeviceCapability } from '../utils/deviceCapability';
 
 gsap.registerPlugin(ScrollTrigger, GSAPSplitText, useGSAP);
+
+const device = getDeviceCapability();
 
 const SplitText = ({
   text,
@@ -44,6 +47,13 @@ const SplitText = ({
     () => {
       if (!ref.current || !text || !fontsLoaded) return;
       if (animationCompletedRef.current) return;
+      // ★ On low-end: skip GSAP text splitting entirely — just show the text
+      if (device.shouldReduceAnimations) {
+        gsap.set(ref.current, { opacity: 1 });
+        animationCompletedRef.current = true;
+        onCompleteRef.current?.();
+        return;
+      }
       const el = ref.current;
 
       if (el._rbsplitInstance) {
@@ -150,7 +160,6 @@ const SplitText = ({
       display: 'inline-block',
       whiteSpace: 'normal',
       wordWrap: 'break-word',
-      willChange: 'transform, opacity'
     };
     const classes = `split-parent ${className}`;
     const Tag = tag || 'p';

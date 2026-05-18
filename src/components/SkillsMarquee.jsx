@@ -6,6 +6,8 @@ import {
   FaPython,
   FaGitAlt,
   FaGithub,
+  FaWordpress,
+  FaDatabase,
 } from 'react-icons/fa6';
 
 const skills = [
@@ -16,6 +18,8 @@ const skills = [
   { icon: <FaPython />, name: 'Python', color: '#3776ab' },
   { icon: <FaGitAlt />, name: 'Git', color: '#f05032' },
   { icon: <FaGithub />, name: 'GitHub', color: '#aaa' },
+  { icon: <FaDatabase />, name: 'MySQL', color: '#00758f' },
+  { icon: <FaWordpress />, name: 'WordPress', color: '#21759b' },
 ];
 
 // Create rows for the vertical marquee

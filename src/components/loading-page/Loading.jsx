@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { getDeviceCapability } from "../../utils/deviceCapability";
 import "./Loading.css";
+
+const device = getDeviceCapability();
 
 const Loading = ({ percent, onComplete, onExitStart }) => {
   const [loaded, setLoaded] = useState(false);
@@ -13,8 +16,8 @@ const Loading = ({ percent, onComplete, onExitStart }) => {
         setLoaded(true);
         const t2 = setTimeout(() => {
           setIsLoaded(true);
-        }, 1000);
-      }, 600);
+        }, device.shouldReduceAnimations ? 200 : 1000);
+      }, device.shouldReduceAnimations ? 100 : 600);
       return () => clearTimeout(t1);
     }
   }, [percent]);
@@ -22,13 +25,15 @@ const Loading = ({ percent, onComplete, onExitStart }) => {
   useEffect(() => {
     if (isLoaded) {
       setClicked(true);
+      const exitDelay = device.shouldReduceAnimations ? 100 : 600;
+      const completeDelay = device.shouldReduceAnimations ? 400 : 1600;
       const t1 = setTimeout(() => {
         setExiting(true);
         if (onExitStart) onExitStart();
-      }, 600);
+      }, exitDelay);
       const t2 = setTimeout(() => {
         if (onComplete) onComplete();
-      }, 1600);
+      }, completeDelay);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
@@ -36,7 +41,9 @@ const Loading = ({ percent, onComplete, onExitStart }) => {
     }
   }, [isLoaded, onComplete]);
 
+  // ★ On low-end: skip the expensive mouse-tracking hover effect entirely
   function handleMouseMove(e) {
+    if (device.shouldReduceAnimations) return;
     const { currentTarget: target } = e;
     const rect = target.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -45,32 +52,56 @@ const Loading = ({ percent, onComplete, onExitStart }) => {
     target.style.setProperty("--mouse-y", `${y}px`);
   }
 
+  // ★ On low-end: render a minimal loading screen (no pancake animation, no marquee)
+  if (device.tier === 'low') {
+    return (
+      <div className={`loading-screen loading-screen--minimal ${exiting && "exiting"}`}>
+        <div className={`loading-wrap ${clicked && "loading-clicked"}`}>
+          <div className="loading-button">
+            <div className="loading-container">
+              <div className="loading-content">
+                <div className="loading-content-in">
+                  Loading <span>{percent}%</span>
+                </div>
+              </div>
+            </div>
+            <div className="loading-content2">
+              <span>Welcome</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className={`loading-header ${clicked && "loader-out"}`}>
         <a href="/#" className="loader-title" data-cursor="disable">
           Logo
         </a>
-        {/* Pancake animation replaces the old stair/loaderGame */}
-        <div className={`pancake-wrapper ${clicked && "loader-out"}`}>
-          <h1 className="cooking-label">Loading in process..</h1>
-          <div className="cooking-area">
-            <div className="cooking-bubble"></div>
-            <div className="cooking-bubble"></div>
-            <div className="cooking-bubble"></div>
-            <div className="cooking-bubble"></div>
-            <div className="cooking-bubble"></div>
-            <div className="cooking-inner-area">
-              <div className="cooking-sides">
-                <div className="cooking-pan"></div>
-                <div className="cooking-handle"></div>
-              </div>
-              <div className="cooking-pancake">
-                <div className="cooking-pastry"></div>
+        {/* Pancake animation — skip on mid-tier mobile to save GPU */}
+        {!device.shouldReduceEffects && (
+          <div className={`pancake-wrapper ${clicked && "loader-out"}`}>
+            <h1 className="cooking-label">Loading in process..</h1>
+            <div className="cooking-area">
+              <div className="cooking-bubble"></div>
+              <div className="cooking-bubble"></div>
+              <div className="cooking-bubble"></div>
+              <div className="cooking-bubble"></div>
+              <div className="cooking-bubble"></div>
+              <div className="cooking-inner-area">
+                <div className="cooking-sides">
+                  <div className="cooking-pan"></div>
+                  <div className="cooking-handle"></div>
+                </div>
+                <div className="cooking-pancake">
+                  <div className="cooking-pastry"></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
       <div className={`loading-screen ${exiting && "exiting"}`}>
         <div className="loading-marquee">

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { getDeviceCapability } from '../utils/deviceCapability';
 import './PillNav.css';
+
+const device = getDeviceCapability();
 
 const PillNav = ({
   logo,
@@ -31,6 +34,16 @@ const PillNav = ({
   const logoRef = useRef(null);
 
   useEffect(() => {
+    // ★ On low-end: skip all the GSAP pill layout + animation setup
+    if (device.shouldReduceAnimations) {
+      const menu = mobileMenuRef.current;
+      if (menu) {
+        menu.style.visibility = 'hidden';
+        menu.style.opacity = '0';
+      }
+      return;
+    }
+
     const layout = () => {
       circleRefs.current.forEach(circle => {
         if (!circle?.parentElement) return;
@@ -94,7 +107,7 @@ const PillNav = ({
       gsap.set(menu, { visibility: 'hidden', opacity: 0, scaleY: 1 });
     }
 
-    if (initialLoadAnimation) {
+    if (initialLoadAnimation && !device.shouldReduceAnimations) {
       const logo = logoRef.current;
       const navItems = navItemsRef.current;
 
@@ -121,6 +134,7 @@ const PillNav = ({
   }, [items, ease, initialLoadAnimation]);
 
   const handleEnter = i => {
+    if (device.shouldReduceAnimations) return;
     const tl = tlRefs.current[i];
     if (!tl) return;
     activeTweenRefs.current[i]?.kill();
@@ -132,6 +146,7 @@ const PillNav = ({
   };
 
   const handleLeave = i => {
+    if (device.shouldReduceAnimations) return;
     const tl = tlRefs.current[i];
     if (!tl) return;
     activeTweenRefs.current[i]?.kill();
@@ -143,6 +158,7 @@ const PillNav = ({
   };
 
   const handleLogoEnter = () => {
+    if (device.shouldReduceAnimations) return;
     const img = logoImgRef.current;
     if (!img) return;
     logoTweenRef.current?.kill();
@@ -330,6 +346,40 @@ const PillNav = ({
           ))}
         </ul>
       </div>
+
+      {/* ★ Mobile Bottom Tab Bar */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation" style={cssVars}>
+        {items.map((item) => {
+          const icons = {
+            'Home': '🏠',
+            'Link': '🔗',
+            'Skills': '⚡',
+            'Project': '📂',
+            'Contact': '✉️',
+          };
+          return (
+            <a
+              key={item.href}
+              href={item.href}
+              className={`mobile-tab-item${activeHref === item.href ? ' is-active' : ''}`}
+              onClick={(e) => handleNavClick(e, item.href)}
+            >
+              <span className="mobile-tab-icon">{icons[item.label] || '•'}</span>
+              <span className="mobile-tab-label">{item.label}</span>
+            </a>
+          );
+        })}
+        {toggleTheme && (
+          <button
+            className="mobile-tab-item mobile-tab-theme"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            <span className="mobile-tab-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            <span className="mobile-tab-label">Theme</span>
+          </button>
+        )}
+      </nav>
     </div>
   );
 };

@@ -1,15 +1,14 @@
-import { useRef, useState, useCallback, useMemo } from 'react';
+import { useRef, useState, useCallback } from 'react';
+import { getDeviceCapability } from '../utils/deviceCapability';
 
-// Detect mobile/low-end once at module level
-const IS_MOBILE = typeof window !== 'undefined' && (
-  ('ontouchstart' in window && window.innerWidth <= 768) ||
-  ((navigator.hardwareConcurrency || 4) <= 4 && (navigator.deviceMemory || 8) <= 4)
-);
+// Detect device tier once at module level
+const device = getDeviceCapability();
 
 /**
  * MagicBentoCard - A card with spotlight tracking, border glow, and star particle effects.
  * Optimized: spotlight uses RAF-throttled updates, stars use shared keyframes.
- * Mobile: spotlight and stars are disabled entirely for performance.
+ * Low-end: ALL interactive effects are disabled to prevent crashes.
+ * Mid-tier: stars disabled, spotlight kept.
  */
 const MagicBentoCard = ({
   children,
@@ -29,9 +28,9 @@ const MagicBentoCard = ({
   const [isHovered, setIsHovered] = useState(false);
   const [stars, setStars] = useState([]);
 
-  // Disable expensive effects on mobile
-  const effectiveSpotlight = enableSpotlight && !IS_MOBILE;
-  const effectiveStars = enableStars && !IS_MOBILE;
+  // Gate effects based on device capability
+  const effectiveSpotlight = enableSpotlight && device.tier === 'high';
+  const effectiveStars = enableStars && device.tier === 'high';
 
   // Throttled mouse tracking using requestAnimationFrame
   const handleMouseMove = useCallback((e) => {
@@ -77,18 +76,21 @@ const MagicBentoCard = ({
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
   const handleMouseLeave = useCallback(() => setIsHovered(false), []);
 
+  // On low-end devices, render a completely inert card — no event listeners at all
+  const isLowEnd = device.tier === 'low';
+
   return (
     <div
       ref={cardRef}
       className={`bento-card ${className}`}
       onMouseMove={effectiveSpotlight ? handleMouseMove : undefined}
-      onMouseEnter={!IS_MOBILE ? handleMouseEnter : undefined}
-      onMouseLeave={!IS_MOBILE ? handleMouseLeave : undefined}
-      onClick={handleClick}
+      onMouseEnter={!isLowEnd ? handleMouseEnter : undefined}
+      onMouseLeave={!isLowEnd ? handleMouseLeave : undefined}
+      onClick={effectiveStars ? handleClick : undefined}
       style={style}
       {...props}
     >
-      {/* Spotlight effect — only on desktop */}
+      {/* Spotlight effect — only on high-end desktop */}
       {effectiveSpotlight && (
         <div
           ref={spotlightRef}
@@ -97,7 +99,7 @@ const MagicBentoCard = ({
         />
       )}
 
-      {/* Star particles — only on desktop */}
+      {/* Star particles — only on high-end desktop */}
       {stars.map((star) => (
         <span
           key={star.id}

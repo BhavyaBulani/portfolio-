@@ -155,6 +155,7 @@ a {
               border-color 0.3s ease;
   contain: layout style paint; /* Rendering isolation for performance */
   content-visibility: auto;    /* Skip rendering when off-screen */
+  /* ★ No will-change here — it reserves GPU memory permanently on every card */
 }
 
 .bento-card:hover {
@@ -172,7 +173,7 @@ a {
   pointer-events: none;
   z-index: 10;
   animation: starBurst 0.7s ease-out forwards;
-  will-change: transform, opacity;
+  /* ★ Removed will-change — particles are short-lived, not worth GPU reservation */
 }
 
 @keyframes starBurst {
@@ -1055,7 +1056,7 @@ a {
 .hero-card {
   background-size: 200% 200%;
   animation: gradient-shift 12s ease-in-out infinite; /* Slowed from 6s — less GPU repaint */
-  will-change: background-position;
+  /* ★ Removed will-change — hero is always visible, permanent GPU reservation wastes memory */
 }
 
 /* Split text styles */
@@ -1113,11 +1114,12 @@ a {
     display: none;
   }
 
-  /* Simpler shadows on mobile */
+  /* ★ KEY FIX: STOP gradient animation entirely on mobile (was only slowed before) */
   .hero-card,
   .hero-card:hover {
     box-shadow: 0 4px 16px rgba(124, 58, 237, 0.25);
-    animation: gradient-shift 20s ease-in-out infinite; /* Much slower on mobile */
+    animation: none;
+    background-size: 100% 100%;
   }
 
   /* Disable spinning dashed border on link icons */
@@ -1168,8 +1170,37 @@ a {
     content-visibility: visible;
   }
 
-  /* Remove will-change on mobile to free GPU memory */
-  .hero-card {
-    will-change: auto;
+  /* ★ Kill all card transitions on mobile to prevent layout thrashing */
+  .bento-card {
+    transition: none;
   }
+}
+
+/* ===== Static 3D model fallback (for devices without WebGL) ===== */
+.model-static-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.model-static-fallback svg {
+  opacity: 0.85;
+  filter: drop-shadow(0 4px 20px rgba(124, 58, 237, 0.3));
+}
+
+.model-static-fallback .fallback-label {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+/* ===== Minimal loading screen for low-end devices ===== */
+.loading-screen--minimal {
+  background-color: #eae5ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
