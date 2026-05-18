@@ -77,9 +77,6 @@ const Loading = ({ percent, onComplete, onExitStart }) => {
   return (
     <>
       <div className={`loading-header ${clicked && "loader-out"}`}>
-        <a href="/#" className="loader-title" data-cursor="disable">
-          Logo
-        </a>
         {/* Pancake animation — skip on mid-tier mobile to save GPU */}
         {!device.shouldReduceEffects && (
           <div className={`pancake-wrapper ${clicked && "loader-out"}`}>
